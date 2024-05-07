@@ -27,7 +27,7 @@ def check_updates():
             # Çekilen verileri yazdırın
             print('ID:', bug_id)
             print('Summary:', summary)
-            print('SummaryHref:', 'https://bugzilla.mozilla.org/show_bug.cgi?id={}'.format(summary_href))
+            print('SummaryHref:', 'https://bugzilla.mozilla.org{}'.format(summary_href))
             print('Status:', status)
             print('---')
     else:
