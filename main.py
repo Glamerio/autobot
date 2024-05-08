@@ -3,9 +3,8 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 from apscheduler.schedulers.blocking import BlockingScheduler
 
-# Last check time (initially set to None)
-last_check_time = datetime.now()
-new_item_found = False  # Flag to indicate if a new item is found
+# Storage for previously seen bug data (replace with your chosen method - timestamp or ID list)
+seen_bugs = set()  # Example using a set for bug IDs
 
 def parse_time(updated_time_str):
     try:
@@ -14,8 +13,12 @@ def parse_time(updated_time_str):
     except ValueError:
         return None
 
+def send_signal_message(message_content):
+    # Function to send Signal message (replace with actual sending logic)
+    print("Sending Signal message:", message_content)
+
 def check_updates():
-    global last_check_time, new_item_found
+    global seen_bugs
     
     url = "https://bugzilla.mozilla.org/buglist.cgi?quicksearch=webgl&list_id=17021492"
 
@@ -38,42 +41,44 @@ def check_updates():
                 updated_time_str = updated_time_elem.text.strip()
                 updated_time = parse_time(updated_time_str)
                 
-                if updated_time is not None and updated_time > last_check_time.time():
-                    # Extract necessary data from each tag
-                    bug_id = tr_tag.find('td', class_='bz_id_column').text.strip()
+                # Extract necessary data from each tag
+                bug_id = tr_tag.find('td', class_='bz_id_column').text.strip()
+                
+                # Check if the bug is new and has a time format update
+                if updated_time is not None and ':' in updated_time_str and bug_id not in seen_bugs:
+                    # New bug detected!
+                    seen_bugs.add(bug_id)  # Add ID to seen list
                     summary_elem = tr_tag.find('td', class_='bz_short_desc_column')
                     summary = summary_elem.text.strip()
                     summary_href = summary_elem.a['href']
                     status = tr_tag.find('td', class_='bz_bug_status_column').text.strip()
                     
-                    # Print the extracted data
-                    print('ID:', bug_id)
-                    print('Summary:', summary)
-                    print('SummaryHref:', 'https://bugzilla.mozilla.org{}'.format(summary_href))
-                    print('Status:', status)
-                    print('Updated:', updated_time_str)
-                    print('---')
+                    # Format message content (including bug details)
+                    message_content = f"New Bug Detected:\nID: {bug_id}\nSummary: {summary}\nStatus: {status}\nUpdated: {updated_time_str}\nLink: https://bugzilla.mozilla.org{summary_href}"
                     
-                    # Mark that a new item is found
-                    new_item_found = True
+                    # Send Signal message
+                    send_signal_message(message_content)
+                    
+                    # ---------
+                    # FOR TESTING
+                    # Set flag to True indicating new bugs are found
+                    new_bugs_found = True
+                    # ---------
+        # -------
+        # FOR TESTING
+        # If no new bugs found, print debug message
+        if not new_bugs_found:
+            print("No new bugs found.")
+        # -------
     else:
         print("An error occurred while loading the page. Status code:", response.status_code)
-    
-    # If no new item is found, do nothing
-    if not new_item_found:
-        print("No new items found.")
-    
-    # Save the current time
-    last_check_time = datetime.now()
-    # Reset the flag
-    new_item_found = False
 
 if __name__ == "__main__":
     # Create a scheduler
     scheduler = BlockingScheduler()
 
     # Schedule the check_updates function to run at regular intervals
-    scheduler.add_job(check_updates, 'interval', seconds=5)
+    scheduler.add_job(check_updates, 'interval', seconds=300)  # 5 minutes interval
 
     # Start the scheduler
     scheduler.start()
