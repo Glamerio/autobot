@@ -1,7 +1,17 @@
-import requests
 from bs4 import BeautifulSoup
+import requests
 from datetime import datetime
 from apscheduler.schedulers.blocking import BlockingScheduler
+from telegram import Bot
+
+# Bot token and target chat ID
+bot_token = '7111966231:AAEwKZlLRDbJruUvkfqEqUWzxrx98fX3I1k'
+
+#If you want to send a message to yourself, specify your own identity in the chat_id variable
+chat_id = 'chatToken'
+
+# Create Telegram bot
+bot = Bot(token=bot_token)
 
 # Storage for previously seen bug data (replace with your chosen method - timestamp or ID list)
 seen_bugs = set()  # Example using a set for bug IDs
@@ -13,9 +23,13 @@ def parse_time(updated_time_str):
     except ValueError:
         return None
 
-def send_signal_message(message_content):
-    # Function to send Signal message (replace with actual sending logic)
-    print("Sending Signal message:", message_content)
+def send_telegram_message(message):
+    try:
+        # Send the message
+        bot.send_message(chat_id=chat_id, text=message)
+        print("Telegram message sent successfully.")
+    except Exception as e:
+        print("Error sending Telegram message:", e)
 
 def check_updates():
     global seen_bugs
@@ -32,6 +46,9 @@ def check_updates():
         
         # Find all <tr> tags
         tr_tags = soup.find_all('tr', class_='bz_bugitem')
+        
+        # Flag to indicate if new bugs are found
+        new_bugs_found = False
         
         # Iterate over each <tr> tag
         for tr_tag in tr_tags:
@@ -56,20 +73,16 @@ def check_updates():
                     # Format message content (including bug details)
                     message_content = f"New Bug Detected:\nID: {bug_id}\nSummary: {summary}\nStatus: {status}\nUpdated: {updated_time_str}\nLink: https://bugzilla.mozilla.org{summary_href}"
                     
-                    # Send Signal message
-                    send_signal_message(message_content)
+                    # Send Telegram message
+                    send_telegram_message(message_content)
                     
-                    # ---------
-                    # FOR TESTING
                     # Set flag to True indicating new bugs are found
                     new_bugs_found = True
-                    # ---------
-        # -------
-        # FOR TESTING
+        
         # If no new bugs found, print debug message
         if not new_bugs_found:
             print("No new bugs found.")
-        # -------
+            
     else:
         print("An error occurred while loading the page. Status code:", response.status_code)
 
@@ -78,7 +91,7 @@ if __name__ == "__main__":
     scheduler = BlockingScheduler()
 
     # Schedule the check_updates function to run at regular intervals
-    scheduler.add_job(check_updates, 'interval', seconds=300)  # 5 minutes interval
+    scheduler.add_job(check_updates, 'interval', seconds=5)  # 5 minutes interval
 
     # Start the scheduler
     scheduler.start()
