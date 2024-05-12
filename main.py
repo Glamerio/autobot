@@ -1,14 +1,12 @@
 from bs4 import BeautifulSoup
 import requests
 from datetime import datetime
-from apscheduler.schedulers.blocking import BlockingScheduler
+import asyncio
 from telegram import Bot
 
 # Bot token and target chat ID
-bot_token = '7111966231:AAEwKZlLRDbJruUvkfqEqUWzxrx98fX3I1k'
-
-#If you want to send a message to yourself, specify your own identity in the chat_id variable
-chat_id = 'chatToken'
+bot_token = 'BOTs Token'  # Insert your bot's token here
+chat_id = 'chat ID'   # Insert your target chat ID here
 
 # Create Telegram bot
 bot = Bot(token=bot_token)
@@ -23,15 +21,15 @@ def parse_time(updated_time_str):
     except ValueError:
         return None
 
-def send_telegram_message(message):
+async def send_telegram_message(message):
     try:
         # Send the message
-        bot.send_message(chat_id=chat_id, text=message)
+        await bot.send_message(chat_id=chat_id, text=message)
         print("Telegram message sent successfully.")
     except Exception as e:
         print("Error sending Telegram message:", e)
 
-def check_updates():
+async def check_updates():
     global seen_bugs
     
     url = "https://bugzilla.mozilla.org/buglist.cgi?quicksearch=webgl&list_id=17021492"
@@ -74,7 +72,7 @@ def check_updates():
                     message_content = f"New Bug Detected:\nID: {bug_id}\nSummary: {summary}\nStatus: {status}\nUpdated: {updated_time_str}\nLink: https://bugzilla.mozilla.org{summary_href}"
                     
                     # Send Telegram message
-                    send_telegram_message(message_content)
+                    await send_telegram_message(message_content)
                     
                     # Set flag to True indicating new bugs are found
                     new_bugs_found = True
@@ -86,12 +84,10 @@ def check_updates():
     else:
         print("An error occurred while loading the page. Status code:", response.status_code)
 
+async def main():
+    while True:
+        await check_updates()
+        await asyncio.sleep(600)  # 10 minutes waiting time
+
 if __name__ == "__main__":
-    # Create a scheduler
-    scheduler = BlockingScheduler()
-
-    # Schedule the check_updates function to run at regular intervals
-    scheduler.add_job(check_updates, 'interval', seconds=5)  # 5 minutes interval
-
-    # Start the scheduler
-    scheduler.start()
+    asyncio.run(main())
